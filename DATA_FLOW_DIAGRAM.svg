@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155" />
+    </marker>
+    <style>
+      .title { font-family: Arial, Helvetica, sans-serif; font-size: 34px; font-weight: 700; fill: #0f172a; }
+      .subtitle { font-family: Arial, Helvetica, sans-serif; font-size: 18px; fill: #475569; }
+      .box { fill: #f8fafc; stroke: #334155; stroke-width: 2; rx: 14; }
+      .agent { fill: #e0f2fe; stroke: #0369a1; stroke-width: 2; rx: 14; }
+      .decision { fill: #fef3c7; stroke: #b45309; stroke-width: 2; rx: 14; }
+      .storage { fill: #dcfce7; stroke: #15803d; stroke-width: 2; rx: 14; }
+      .report { fill: #ede9fe; stroke: #6d28d9; stroke-width: 2; rx: 14; }
+      .human { fill: #ffe4e6; stroke: #be123c; stroke-width: 2; rx: 14; }
+      .text-main { font-family: Arial, Helvetica, sans-serif; font-size: 18px; font-weight: 700; fill: #0f172a; }
+      .text-sub { font-family: Arial, Helvetica, sans-serif; font-size: 14px; fill: #475569; }
+      .label { font-family: Arial, Helvetica, sans-serif; font-size: 13px; fill: #334155; font-weight: 700; }
+      .arrow { stroke: #334155; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .dashed { stroke-dasharray: 8 6; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="1100" fill="#ffffff" />
+
+  <text x="800" y="55" text-anchor="middle" class="title">ClaimFraudCheck Data Flow Diagram</text>
+  <text x="800" y="86" text-anchor="middle" class="subtitle">Automated Duplicate Claim and Digital Tampering Detection with Human-in-the-Loop Feedback</text>
+
+  <!-- Input and extraction -->
+  <rect x="70" y="145" width="230" height="95" class="box" />
+  <text x="185" y="180" text-anchor="middle" class="text-main">Raw Claim Input</text>
+  <text x="185" y="205" text-anchor="middle" class="text-sub">PDF, image, OCR payload</text>
+
+  <rect x="390" y="140" width="250" height="105" class="agent" />
+  <text x="515" y="177" text-anchor="middle" class="text-main">Extraction Agent</text>
+  <text x="515" y="202" text-anchor="middle" class="text-sub">mock_ocr_extract()</text>
+  <text x="515" y="222" text-anchor="middle" class="text-sub">normalize_claim()</text>
+
+  <rect x="720" y="145" width="230" height="95" class="box" />
+  <text x="835" y="180" text-anchor="middle" class="text-main">Claim Schema</text>
+  <text x="835" y="205" text-anchor="middle" class="text-sub">Pydantic validation</text>
+
+  <!-- Agents -->
+  <rect x="250" y="330" width="270" height="105" class="agent" />
+  <text x="385" y="367" text-anchor="middle" class="text-main">Forensic Agent</text>
+  <text x="385" y="392" text-anchor="middle" class="text-sub">PDF metadata scrutiny</text>
+  <text x="385" y="412" text-anchor="middle" class="text-sub">Pillow ELA analysis</text>
+
+  <rect x="920" y="330" width="270" height="105" class="agent" />
+  <text x="1055" y="367" text-anchor="middle" class="text-main">Auditor Agent</text>
+  <text x="1055" y="392" text-anchor="middle" class="text-sub">Hash, fuzzy match</text>
+  <text x="1055" y="412" text-anchor="middle" class="text-sub">Cross-reference engine</text>
+
+  <!-- Forensic checks -->
+  <rect x="95" y="515" width="250" height="92" class="box" />
+  <text x="220" y="550" text-anchor="middle" class="text-main">Metadata Check</text>
+  <text x="220" y="575" text-anchor="middle" class="text-sub">Producer / Creator</text>
+
+  <rect x="425" y="515" width="250" height="92" class="box" />
+  <text x="550" y="550" text-anchor="middle" class="text-main">ELA Check</text>
+  <text x="550" y="575" text-anchor="middle" class="text-sub">Recompression diff</text>
+
+  <rect x="260" y="690" width="260" height="92" class="box" />
+  <text x="390" y="725" text-anchor="middle" class="text-main">Forensic Flags</text>
+  <text x="390" y="750" text-anchor="middle" class="text-sub">Metadata + ELA signals</text>
+
+  <!-- Auditor checks -->
+  <rect x="765" y="510" width="225" height="92" class="box" />
+  <text x="877" y="545" text-anchor="middle" class="text-main">Exact Match</text>
+  <text x="877" y="570" text-anchor="middle" class="text-sub">SHA-256 fingerprint</text>
+
+  <rect x="1030" y="510" width="225" height="92" class="box" />
+  <text x="1142" y="545" text-anchor="middle" class="text-main">Fuzzy Match</text>
+  <text x="1142" y="570" text-anchor="middle" class="text-sub">thefuzz ratio</text>
+
+  <rect x="1295" y="510" width="225" height="92" class="box" />
+  <text x="1407" y="545" text-anchor="middle" class="text-main">Cross-Reference</text>
+  <text x="1407" y="570" text-anchor="middle" class="text-sub">Patient + Date + Amount</text>
+
+  <rect x="1035" y="690" width="260" height="92" class="box" />
+  <text x="1165" y="725" text-anchor="middle" class="text-main">Auditor Flags</text>
+  <text x="1165" y="750" text-anchor="middle" class="text-sub">Exact, fuzzy, cross-ref</text>
+
+  <!-- Risk and result -->
+  <rect x="660" y="815" width="280" height="105" class="decision" />
+  <text x="800" y="852" text-anchor="middle" class="text-main">Risk Scorer</text>
+  <text x="800" y="877" text-anchor="middle" class="text-sub">Weighted feature scoring</text>
+  <text x="800" y="897" text-anchor="middle" class="text-sub">0 to 100 risk score</text>
+
+  <rect x="1080" y="815" width="270" height="105" class="box" />
+  <text x="1215" y="852" text-anchor="middle" class="text-main">ReviewResult</text>
+  <text x="1215" y="877" text-anchor="middle" class="text-sub">risk_score, status</text>
+  <text x="1215" y="897" text-anchor="middle" class="text-sub">flags, reason</text>
+
+  <!-- Outcomes -->
+  <rect x="315" y="965" width="210" height="80" class="decision" />
+  <text x="420" y="998" text-anchor="middle" class="text-main">APPROVED</text>
+  <text x="420" y="1022" text-anchor="middle" class="text-sub">risk &lt; 40</text>
+
+  <rect x="635" y="965" width="240" height="80" class="human" />
+  <text x="755" y="998" text-anchor="middle" class="text-main">PENDING_REVIEW</text>
+  <text x="755" y="1022" text-anchor="middle" class="text-sub">40 &lt;= risk &lt;= 75</text>
+
+  <rect x="990" y="965" width="210" height="80" class="decision" />
+  <text x="1095" y="998" text-anchor="middle" class="text-main">FLAGGED</text>
+  <text x="1095" y="1022" text-anchor="middle" class="text-sub">risk &gt; 75</text>
+
+  <!-- Feedback and reporting -->
+  <rect x="1280" y="965" width="240" height="80" class="report" />
+  <text x="1400" y="998" text-anchor="middle" class="text-main">Metrics + Report</text>
+  <text x="1400" y="1022" text-anchor="middle" class="text-sub">Confusion matrix</text>
+
+  <rect x="70" y="815" width="245" height="105" class="human" />
+  <text x="192" y="852" text-anchor="middle" class="text-main">Human Reviewer</text>
+  <text x="192" y="877" text-anchor="middle" class="text-sub">submit_human_override()</text>
+  <text x="192" y="897" text-anchor="middle" class="text-sub">Final decision</text>
+
+  <rect x="360" y="815" width="230" height="105" class="storage" />
+  <text x="475" y="852" text-anchor="middle" class="text-main">SQLite Feedback DB</text>
+  <text x="475" y="877" text-anchor="middle" class="text-sub">AI risk score</text>
+  <text x="475" y="897" text-anchor="middle" class="text-sub">Human decision</text>
+
+  <rect x="1245" y="145" width="250" height="105" class="storage" />
+  <text x="1370" y="182" text-anchor="middle" class="text-main">retrain_thresholds()</text>
+  <text x="1370" y="207" text-anchor="middle" class="text-sub">Adjust sensitivity</text>
+  <text x="1370" y="227" text-anchor="middle" class="text-sub">Fuzzy / ELA thresholds</text>
+
+  <!-- Arrows top -->
+  <path d="M300 192 L390 192" class="arrow" />
+  <path d="M640 192 L720 192" class="arrow" />
+  <path d="M835 240 L500 330" class="arrow" />
+  <path d="M835 240 L1035 330" class="arrow" />
+
+  <!-- Forensic arrows -->
+  <path d="M360 435 L230 515" class="arrow" />
+  <path d="M420 435 L540 515" class="arrow" />
+  <path d="M220 607 L350 690" class="arrow" />
+  <path d="M550 607 L430 690" class="arrow" />
+
+  <!-- Auditor arrows -->
+  <path d="M1005 435 L880 510" class="arrow" />
+  <path d="M1055 435 L1142 510" class="arrow" />
+  <path d="M1110 435 L1407 510" class="arrow" />
+  <path d="M877 602 L1095 690" class="arrow" />
+  <path d="M1142 602 L1165 690" class="arrow" />
+  <path d="M1407 602 L1235 690" class="arrow" />
+
+  <!-- Risk arrows -->
+  <path d="M520 736 L660 860" class="arrow" />
+  <path d="M1035 736 L940 860" class="arrow" />
+  <path d="M940 867 L1080 867" class="arrow" />
+
+  <!-- Outcome arrows -->
+  <path d="M1185 920 C1020 950 640 950 500 965" class="arrow" />
+  <text x="610" y="940" text-anchor="middle" class="label">risk &lt; 40</text>
+
+  <path d="M1215 920 C1120 950 870 950 800 965" class="arrow" />
+  <text x="940" y="940" text-anchor="middle" class="label">40-75</text>
+
+  <path d="M1225 920 C1215 948 1160 950 1120 965" class="arrow" />
+  <text x="1218" y="945" text-anchor="middle" class="label">&gt; 75</text>
+
+  <path d="M1200 1005 L1280 1005" class="arrow" />
+  <path d="M875 1005 L990 1005" class="arrow dashed" />
+  <path d="M525 1005 C800 1080 1130 1080 1280 1020" class="arrow dashed" />
+
+  <!-- Human feedback arrows -->
+  <path d="M755 965 C650 880 380 850 315 865" class="arrow" />
+  <path d="M990 1000 C800 900 390 860 315 875" class="arrow dashed" />
+  <path d="M315 867 L360 867" class="arrow" />
+  <path d="M590 850 C800 660 1150 470 1330 250" class="arrow" />
+  <path d="M1370 250 C1330 330 1210 380 1190 382" class="arrow dashed" />
+  <path d="M1370 250 C1210 310 520 310 470 350" class="arrow dashed" />
+
+  <!-- Legend -->
+  <rect x="70" y="35" width="250" height="78" class="box" />
+  <text x="195" y="65" text-anchor="middle" class="text-main">Legend</text>
+  <circle cx="95" cy="88" r="6" fill="#0369a1" />
+  <text x="112" y="93" class="text-sub">Blue: agents</text>
+  <circle cx="205" cy="88" r="6" fill="#15803d" />
+  <text x="222" y="93" class="text-sub">Green: feedback store</text>
+</svg>
