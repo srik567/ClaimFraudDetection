@@ -1,1 +1,6 @@
-.venv
+agents/__pycache__/
+evaluation/__pycache__/
+feedback/__pycache__/
+schemas/__pycache__/
+mock_data/__pycache__/
+
