@@ -1,0 +1,11 @@
+{
+  "invoice_id": "CLAIM-H001-ABC-202403-001",
+  "amount": 1250.0,
+  "patient_name": "Alice Johnson",
+  "hospital_id": "HOSP-001",
+  "timestamp": "2024-03-01T00:00:00",
+  "ocr_confidence": 0.9412,
+  "source_file": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_01_clean.png",
+  "raw_text": "INSURANCE CLAIM FORM\n\nInvoice ID: CLAIM-H001-ABC-202403-001\nPatient Name: Alice Johnson\n\nHospital ID: HOSP-001\n\nAmount: $1250.00\n\nDate: 2024-03-01",
+  "image_path": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_01_clean.png"
+}

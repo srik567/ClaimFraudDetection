@@ -1,0 +1,11 @@
+{
+  "invoice_id": "CLAIM-H004-DUP-202403-200",
+  "amount": 1750.25,
+  "patient_name": "James Wilson",
+  "hospital_id": "HOSP-004",
+  "timestamp": "2024-03-12T00:00:00",
+  "ocr_confidence": 0.9424,
+  "source_file": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_05_dup_a.png",
+  "raw_text": "INSURANCE CLAIM FORM\n\nInvoice ID: CLAIM-H004-DUP-202403-200\nPatient Name: James Wilson\n\nHospital ID: HOSP-004\n\nAmount: $1750.25\n\nDate: 2024-03-12",
+  "image_path": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_05_dup_a.png"
+}

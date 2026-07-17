@@ -1,0 +1,11 @@
+{
+  "invoice_id": "CLAIM-H003-XYZ-202403-100",
+  "amount": 2400.0,
+  "patient_name": "Maria Garcia",
+  "hospital_id": "HOSP-003",
+  "timestamp": "2024-03-10T00:00:00",
+  "ocr_confidence": 0.9412,
+  "source_file": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_03_base.png",
+  "raw_text": "INSURANCE CLAIM FORM\n\nInvoice ID: CLAIM-H003-XYZ-202403-100\nPatient Name: Maria Garcia\n\nHospital ID: HOSP-003\n\nAmount: $2400.00\n\nDate: 2024-03-10",
+  "image_path": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_03_base.png"
+}

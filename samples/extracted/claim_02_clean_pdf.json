@@ -1,0 +1,10 @@
+{
+  "invoice_id": "CLAIM-H002-DEF-202403-010",
+  "amount": 890.5,
+  "patient_name": "Robert Smith",
+  "hospital_id": "HOSP-002",
+  "timestamp": "2024-03-05T00:00:00",
+  "ocr_confidence": 0.98,
+  "source_file": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_02_clean_pdf.pdf",
+  "raw_text": "INSURANCE CLAIM FORM\nInvoice ID: CLAIM-H002-DEF-202403-010\nPatient Name: Robert Smith\nHospital ID: HOSP-002\nAmount: $890.50\nDate: 2024-03-05"
+}

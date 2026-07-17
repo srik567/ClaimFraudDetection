@@ -1,0 +1,10 @@
+{
+  "invoice_id": "12345678",
+  "amount": 99000.0,
+  "patient_name": "PQR",
+  "hospital_id": "LMN1234",
+  "timestamp": "2024-08-22T00:00:00",
+  "ocr_confidence": 0.98,
+  "source_file": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_12_amount_tamper.pdf",
+  "raw_text": "PARAMOUNT HEALTH SERVICES & INSURANCE TPA PRIVATE LIMITED\nCLAIM ACKNOWLEDGMENT SHEET\nScenario: AMOUNT_TAMPER\nName of Insurer: ABC Insurance Company PHS ID: LMN1234\nPatient Name: PQR\nPolicy No: 12345678\nHospital ID: LMN1234\nName of Hospital where Admitted: City Hospital\nDate: 2024-08-22\nDETAILS OF CLAIM:\nHospital main Bill 9 9 0 0 0\nAmount: Rs. 99000\nTotal claimed amount: 99000"
+}

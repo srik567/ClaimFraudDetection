@@ -1,9 +1,9 @@
 """
-Extraction Agent — normalises raw claim data and mocks OCR confidence scoring.
+Extraction Agent — normalises claim data and extracts fields from documents.
 
-In production this module would wrap a real OCR engine (e.g., Tesseract, AWS
-Textract).  Here we simulate it with structured dicts so the rest of the
-pipeline can run without physical documents.
+Supports:
+  - mock_ocr_extract(dict) — structured/synthetic payloads (simulation path)
+  - extract_from_file(path) — real PDF/image OCR via DocumentExtractor
 """
 
 from __future__ import annotations
@@ -12,8 +12,10 @@ import logging
 import re
 import unicodedata
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
+from agents.document_extractor import DocumentExtractor
 from schemas.models import Claim
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,9 @@ LOW_CONFIDENCE_THRESHOLD = 0.75
 
 class ExtractionAgent:
     """Handles document extraction, field normalisation, and OCR confidence checks."""
+
+    def __init__(self, document_extractor: Optional[DocumentExtractor] = None) -> None:
+        self.document_extractor = document_extractor or DocumentExtractor()
 
     def normalize_claim(self, claim: Claim) -> Claim:
         """
@@ -100,6 +105,17 @@ class ExtractionAgent:
         )
 
         return self.normalize_claim(claim)
+
+    def extract_from_file(self, path: Union[str, Path]) -> Claim:
+        """
+        Read a claim PDF/image from disk, OCR/parse fields, and return a Claim.
+
+        Delegates OCR to DocumentExtractor, then reuses mock_ocr_extract for
+        normalisation and confidence handling.
+        """
+        raw = self.document_extractor.extract_from_path(path)
+        # Bytes are not JSON-serialisable; keep them for forensics only.
+        return self.mock_ocr_extract(raw)
 
     # ------------------------------------------------------------------
     # Internal helpers

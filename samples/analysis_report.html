@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Claim Fraud Detection — Document Analysis</title>
+  <style>
+    :root {
+      --bg: #f3efe6;
+      --ink: #1c1915;
+      --muted: #5c564c;
+      --line: #d7d0c3;
+      --card: #fffdf8;
+      --approved: #1f6b4a;
+      --approved-bg: #e5f4ec;
+      --flagged: #9b1c1c;
+      --flagged-bg: #fde8e8;
+      --pending: #8a5a00;
+      --pending-bg: #fff3d6;
+      --accent: #0f4c5c;
+      --hero: #143d4a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, #efe7d6 0%, transparent 40%),
+        linear-gradient(180deg, #f7f3ea 0%, var(--bg) 100%);
+      line-height: 1.45;
+    }
+    header {
+      padding: 2.25rem 1.5rem 1.25rem;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,253,248,0.85);
+    }
+    header h1 {
+      margin: 0 0 0.35rem;
+      font-family: "IBM Plex Serif", Georgia, serif;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      letter-spacing: -0.02em;
+    }
+    header p { margin: 0; color: var(--muted); }
+    main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: grid;
+      gap: 1.25rem;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+    .summary-wide {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+    @media (max-width: 800px) {
+      .summary, .summary-wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 1rem;
+    }
+    .stat.highlight {
+      border-color: var(--accent);
+      background: #eef6f8;
+    }
+    .stat span { display: block; color: var(--muted); font-size: 0.85rem; }
+    .stat strong { font-size: 1.6rem; }
+    .stat em {
+      display: block;
+      margin-top: 0.35rem;
+      font-style: normal;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 1.1rem 1.2rem;
+    }
+    .panel.warn { border-color: #e0b56a; background: #fff8ea; }
+    .panel.exec { border-color: var(--accent); }
+    .panel h2 {
+      margin: 0 0 0.85rem;
+      font-size: 1.05rem;
+      color: var(--accent);
+    }
+    .panel p.note {
+      margin: 0.75rem 0 0;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+    .metrics div {
+      border: 1px solid var(--line);
+      padding: 0.75rem;
+    }
+    .metrics span { display: block; color: var(--muted); font-size: 0.8rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      padding: 0.7rem 0.55rem;
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .matrix th, .matrix td { text-align: center; }
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+    }
+    .status-approved { color: var(--approved); background: var(--approved-bg); }
+    .status-flagged { color: var(--flagged); background: var(--flagged-bg); }
+    .status-pending { color: var(--pending); background: var(--pending-bg); }
+    .flags { margin: 0; padding-left: 1.1rem; color: var(--muted); }
+    .reason {
+      color: var(--ink);
+      max-width: 36rem;
+      line-height: 1.5;
+    }
+    .llm { display: none; }
+    .flags { display: none; }
+    .timing { display: none; }
+    footer {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem 2rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.86em; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Claim Fraud Detection — Document Analysis</h1>
+    <p>Input: /Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims · Generated 2026-07-17 11:52:42</p>
+  </header>
+  <main>
+    <section class="summary">
+      <div class="stat"><span>Processed</span><strong>14</strong></div>
+      <div class="stat"><span>Approved</span><strong>6</strong></div>
+      <div class="stat"><span>Pending</span><strong>3</strong></div>
+      <div class="stat"><span>Flagged</span><strong>5</strong></div>
+    </section>
+    
+    <section class="panel exec">
+      <h2>Operational efficiency — executive view</h2>
+      <div class="summary-wide">
+        <div class="stat highlight">
+          <span>Hours saved vs full manual</span>
+          <strong>1.78 hrs</strong>
+          <em>63.7% less human review effort</em>
+        </div>
+        <div class="stat highlight">
+          <span>Straight-through processing</span>
+          <strong>42.9%</strong>
+          <em>Claims auto-approved with no human touch</em>
+        </div>
+        <div class="stat highlight">
+          <span>Auto-decision rate</span>
+          <strong>78.6%</strong>
+          <em>Approved + flagged without full review queue</em>
+        </div>
+        <div class="stat">
+          <span>Machine throughput</span>
+          <strong>279/hr</strong>
+          <em>Avg 12910 ms/claim
+          (p95 28259 ms)</em>
+        </div>
+        <div class="stat">
+          <span>Human-touch rate</span>
+          <strong>21.4%</strong>
+          <em>Only pending claims need analyst review</em>
+        </div>
+        <div class="stat">
+          <span>Amount flagged for SIU</span>
+          <strong>$125,150</strong>
+          <em>Approved $28,291 · Queue $22,640</em>
+        </div>
+      </div>
+      <p class="note">
+        Baseline assumes 12 min manual review per claim
+        (2.80 hrs for this batch).
+        With automation: pending @ 12 min +
+        flagged triage @ 5 min
+        = 1.02 hrs.
+        Total machine time for this run: 180.74s.
+      </p>
+    </section>
+    
+    
+    
+    
+    <section class="panel">
+      <h2>Claim analysis</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Invoice</th>
+            <th>Patient</th>
+            <th>Amount</th>
+            <th>Risk</th>
+            <th>Time</th>
+            <th>Status</th>
+            <th>Findings</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+    <tr>
+      <td>01</td>
+      <td><code>CLAIM-H001-ABC-202403-001</code></td>
+      <td>Alice Johnson</td>
+      <td>$1,250.00<br/><span style="color:var(--muted)">HOSP-001</span></td>
+      <td>0/100</td>
+      <td>485 ms</td>
+      <td><span class="badge status-approved">Approved</span></td>
+      <td><div class="reason">This claim for Alice Johnson ($1,250.00) looks consistent with prior clean activity. No duplicate, document-edit, or mismatch concerns were found. It can proceed for normal payment processing.</div></td>
+    </tr>
+    
+    <tr>
+      <td>02</td>
+      <td><code>CLAIM-H002-DEF-202403-010</code></td>
+      <td>Robert Smith</td>
+      <td>$890.50<br/><span style="color:var(--muted)">HOSP-002</span></td>
+      <td>0/100</td>
+      <td>63 ms</td>
+      <td><span class="badge status-approved">Approved</span></td>
+      <td><div class="reason">This claim for Robert Smith ($890.50) looks consistent with prior clean activity. No duplicate, document-edit, or mismatch concerns were found. It can proceed for normal payment processing.</div></td>
+    </tr>
+    
+    <tr>
+      <td>03</td>
+      <td><code>CLAIM-H003-XYZ-202403-100</code></td>
+      <td>Maria Garcia</td>
+      <td>$2,400.00<br/><span style="color:var(--muted)">HOSP-003</span></td>
+      <td>0/100</td>
+      <td>410 ms</td>
+      <td><span class="badge status-approved">Approved</span></td>
+      <td><div class="reason">This claim for Maria Garcia ($2,400.00) looks consistent with prior clean activity. No duplicate, document-edit, or mismatch concerns were found. It can proceed for normal payment processing.</div></td>
+    </tr>
+    
+    <tr>
+      <td>04</td>
+      <td><code>CLAIM-H003-XYZ-202403-100</code></td>
+      <td>Maria Garcia</td>
+      <td>$2,400.00<br/><span style="color:var(--muted)">HOSP-003</span></td>
+      <td>100/100</td>
+      <td>27.1 sec</td>
+      <td><span class="badge status-flagged">Hold — investigate</span></td>
+      <td><div class="reason">This claim should be held and investigated before payment (patient Maria Garcia, amount $2,400.00). It appears to be an exact resubmission of an earlier claim (same details as invoice CLAIM-H003-XYZ-202403-100). The claim is flagged because the provided invoice ID, CLAIM-H003-XYZ-202403-100, has an exact duplicate hash match. This suggests potential duplicate billing or submission of identical documentation. Further investigation is required to confirm if this is a legitimate resubmission or fraudulent activity. Recommended next step: route to investigation / SIU, confirm whether this is a true duplicate or altered document, and do not release payment until cleared.</div></td>
+    </tr>
+    
+    <tr>
+      <td>05</td>
+      <td><code>CLAIM-H004-DUP-202403-200</code></td>
+      <td>James Wilson</td>
+      <td>$1,750.25<br/><span style="color:var(--muted)">HOSP-004</span></td>
+      <td>0/100</td>
+      <td>416 ms</td>
+      <td><span class="badge status-approved">Approved</span></td>
+      <td><div class="reason">This claim for James Wilson ($1,750.25) looks consistent with prior clean activity. No duplicate, document-edit, or mismatch concerns were found. It can proceed for normal payment processing.</div></td>
+    </tr>
+    
+    <tr>
+      <td>06</td>
+      <td><code>CLAIM-H004-DUP-202403-200</code></td>
+      <td>James Wilson</td>
+      <td>$1,750.25<br/><span style="color:var(--muted)">HOSP-004</span></td>
+      <td>100/100</td>
+      <td>20.8 sec</td>
+      <td><span class="badge status-flagged">Hold — investigate</span></td>
+      <td><div class="reason">This claim should be held and investigated before payment (patient James Wilson, amount $1,750.25). It appears to be an exact resubmission of an earlier claim (same details as invoice CLAIM-H004-DUP-202403-200). The claim is flagged because the system detected an exact duplicate of this invoice. The SHA-256 hash match indicates that the same billing document has been submitted previously, which requires manual investigation to confirm if it is a legitimate resubmission or fraudulent duplication. Recommended next step: route to investigation / SIU, confirm whether this is a true duplicate or altered document, and do not release payment until cleared.</div></td>
+    </tr>
+    
+    <tr>
+      <td>07</td>
+      <td><code>CLAIM-H005-LOW-202403-300</code></td>
+      <td>Emily Chen</td>
+      <td>$640.00<br/><span style="color:var(--muted)">HOSP-005</span></td>
+      <td>50/100</td>
+      <td>25.7 sec</td>
+      <td><span class="badge status-pending">Needs review</span></td>
+      <td><div class="reason">This claim needs a claim manager review before it is approved or denied (patient Emily Chen, amount $640.00). The claim image looks like parts of it may have been digitally changed (for example, an amount or name pasted over the original). Please verify against the original hospital bill. The claim has been flagged due to the detection of pixel-level tampering using ELA analysis. The high ELA score (15.82) significantly exceeds the established threshold of 8.00, suggesting potential alteration of the document, such as an overlaid font or modified amount field. Recommended next step: compare this form with the original hospital documents and the earlier related claim, then approve, deny, or request more information.</div></td>
+    </tr>
+    
+    <tr>
+      <td>08</td>
+      <td><code>12345678</code></td>
+      <td>Pqr</td>
+      <td>$11,000.00<br/><span style="color:var(--muted)">LMN1234</span></td>
+      <td>0/100</td>
+      <td>906 ms</td>
+      <td><span class="badge status-approved">Approved</span></td>
+      <td><div class="reason">This claim for Pqr ($11,000.00) looks consistent with prior clean activity. No duplicate, document-edit, or mismatch concerns were found. It can proceed for normal payment processing.</div></td>
+    </tr>
+    
+    <tr>
+      <td>09</td>
+      <td><code>12345678</code></td>
+      <td>Pqr</td>
+      <td>$11,000.00<br/><span style="color:var(--muted)">LMN1234</span></td>
+      <td>100/100</td>
+      <td>23.3 sec</td>
+      <td><span class="badge status-flagged">Hold — investigate</span></td>
+      <td><div class="reason">This claim should be held and investigated before payment (patient Pqr, amount $11,000.00). It appears to be an exact resubmission of an earlier claim (same details as invoice 12345678). The claim is flagged because the system detected an exact duplicate of invoice &#x27;12345678&#x27;. This suggests potential billing fraud or improper resubmission. Payment should be held for manual investigation to confirm if this is a legitimate re-submission or fraudulent activity. Recommended next step: route to investigation / SIU, confirm whether this is a true duplicate or altered document, and do not release payment until cleared.</div></td>
+    </tr>
+    
+    <tr>
+      <td>10</td>
+      <td><code>CLAIM-PHS-12345678-AUG2024</code></td>
+      <td>Pqr</td>
+      <td>$11,000.00<br/><span style="color:var(--muted)">LMN1234</span></td>
+      <td>0/100</td>
+      <td>3 ms</td>
+      <td><span class="badge status-approved">Approved</span></td>
+      <td><div class="reason">This claim for Pqr ($11,000.00) looks consistent with prior clean activity. No duplicate, document-edit, or mismatch concerns were found. It can proceed for normal payment processing.</div></td>
+    </tr>
+    
+    <tr>
+      <td>11</td>
+      <td><code>CLAIM-PHS-1234567B-AUG2024</code></td>
+      <td>Pqr</td>
+      <td>$11,000.00<br/><span style="color:var(--muted)">LMN1234</span></td>
+      <td>100/100</td>
+      <td>29.4 sec</td>
+      <td><span class="badge status-flagged">Hold — investigate</span></td>
+      <td><div class="reason">This claim should be held and investigated before payment (patient Pqr, amount $11,000.00). The invoice / policy number is almost the same as an existing claim (CLAIM-PHS-12345678-AUG2024). This often happens when a digit or letter was changed on purpose or by mistake. The same patient, service date, and amount were already claimed under invoice CLAIM-PHS-12345678-AUG2024, even though this form uses a different number. The claim is flagged because the invoice appears to be a fuzzy duplicate of an existing record. Specifically, this invoice ID is 96% similar to &#x27;CLAIM-PHS-12345678-AUG2024&#x27;. Furthermore, the combination of patient, date, and amount already exists under that previous invoice, strongly suggesting potential billing duplication. Recommended next step: route to investigation / SIU, confirm whether this is a true duplicate or altered document, and do not release payment until cleared.</div></td>
+    </tr>
+    
+    <tr>
+      <td>12</td>
+      <td><code>12345678</code></td>
+      <td>Pqr</td>
+      <td>$99,000.00<br/><span style="color:var(--muted)">LMN1234</span></td>
+      <td>100/100</td>
+      <td>3 ms</td>
+      <td><span class="badge status-flagged">Hold — investigate</span></td>
+      <td><div class="reason">This claim should be held and investigated before payment (patient Pqr, amount $99,000.00). The invoice / policy number is almost the same as an existing claim (12345678). This often happens when a digit or letter was changed on purpose or by mistake. The document file shows it was created or edited with design software (such as Photoshop or Canva) rather than standard hospital billing software, so the PDF may have been altered. The claim is flagged because the system detected an exact duplicate of invoice &#x27;12345678&#x27;. This suggests potential billing fraud or improper resubmission. Payment should be held for manual investigation to confirm if this is a legitimate re-submission or fraudulent activity. Recommended next step: route to investigation / SIU, confirm whether this is a true duplicate or altered document, and do not release payment until cleared.</div></td>
+    </tr>
+    
+    <tr>
+      <td>13</td>
+      <td><code>CLAIM-PHS-12345679-LOWOCR</code></td>
+      <td>Por</td>
+      <td>$11,000.00<br/><span style="color:var(--muted)">LMN1234</span></td>
+      <td>50/100</td>
+      <td>27.6 sec</td>
+      <td><span class="badge status-pending">Needs review</span></td>
+      <td><div class="reason">This claim needs a claim manager review before it is approved or denied (patient Por, amount $11,000.00). The claim image looks like parts of it may have been digitally changed (for example, an amount or name pasted over the original). Please verify against the original hospital bill. The claim exhibits strong indicators of potential tampering, specifically detected by the ELA analysis. The high ELA score (9.58) exceeds the established threshold, suggesting possible font overlay or alteration of the amount field. Due to this clear evidence of data manipulation, payment should be halted for manual review. Recommended next step: compare this form with the original hospital documents and the earlier related claim, then approve, deny, or request more information.</div></td>
+    </tr>
+    
+    <tr>
+      <td>14</td>
+      <td><code>CLAIM-PHS-87654321-XREF</code></td>
+      <td>Pqr</td>
+      <td>$11,000.00<br/><span style="color:var(--muted)">LMN1234</span></td>
+      <td>60/100</td>
+      <td>24.6 sec</td>
+      <td><span class="badge status-pending">Needs review</span></td>
+      <td><div class="reason">This claim needs a claim manager review before it is approved or denied (patient Pqr, amount $11,000.00). The same patient, service date, and amount were already claimed under invoice CLAIM-PHS-12345678-AUG2024, even though this form uses a different number. Recommended next step: compare this form with the original hospital documents and the earlier related claim, then approve, deny, or request more information.</div></td>
+    </tr>
+    
+        </tbody>
+      </table>
+    </section>
+  </main>
+  <footer>ClaimFraudDetection · automation reduces full manual review to exceptions only</footer>
+</body>
+</html>

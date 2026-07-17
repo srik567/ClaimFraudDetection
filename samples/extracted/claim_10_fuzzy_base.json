@@ -1,0 +1,10 @@
+{
+  "invoice_id": "CLAIM-PHS-12345678-AUG2024",
+  "amount": 11000.0,
+  "patient_name": "PQR",
+  "hospital_id": "LMN1234",
+  "timestamp": "2024-08-22T00:00:00",
+  "ocr_confidence": 0.98,
+  "source_file": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_10_fuzzy_base.pdf",
+  "raw_text": "PARAMOUNT HEALTH SERVICES & INSURANCE TPA PRIVATE LIMITED\nCLAIM ACKNOWLEDGMENT SHEET\nScenario: FUZZY_BASE\nName of Insurer: ABC Insurance Company PHS ID: LMN1234\nPatient Name: PQR\nPolicy No: CLAIM-PHS-12345678-AUG2024\nHospital ID: LMN1234\nName of Hospital where Admitted: City Hospital\nDate: 2024-08-22\nDETAILS OF CLAIM:\nHospital main Bill 1 1 0 0 0\nAmount: Rs. 11000\nTotal claimed amount: 11000"
+}

@@ -1,0 +1,56 @@
+%PDF-1.4
+1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj
+2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj
+3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj
+4 0 obj<< /Length 545 >>stream
+BT
+/F1 11 Tf
+40 760 Td
+14 TL
+(PARAMOUNT HEALTH SERVICES & INSURANCE TPA PRIVATE LIMITED) Tj
+T*
+(CLAIM ACKNOWLEDGMENT SHEET) Tj
+T*
+(Scenario: FUZZY_TWIN) Tj
+T*
+() Tj
+T*
+(Name of Insurer: ABC Insurance Company PHS ID: LMN1234) Tj
+T*
+(Patient Name: PQR) Tj
+T*
+(Policy No: CLAIM-PHS-1234567B-AUG2024) Tj
+T*
+(Hospital ID: LMN1234) Tj
+T*
+(Name of Hospital where Admitted: City Hospital) Tj
+T*
+(Date: 2024-08-22) Tj
+T*
+() Tj
+T*
+(DETAILS OF CLAIM:) Tj
+T*
+(Hospital main Bill 1 1 0 0 0) Tj
+T*
+(Amount: Rs. 11000) Tj
+T*
+(Total claimed amount: 11000) Tj
+ET
+endstream
+endobj
+5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj
+6 0 obj<< /Producer (ClaimFraudDetection Sample Generator) /Creator (ClaimFraudDetection Sample Generator) >>endobj
+xref
+0 7
+0000000000 65535 f 
+0000000009 00000 n 
+0000000056 00000 n 
+0000000111 00000 n 
+0000000235 00000 n 
+0000000829 00000 n 
+0000000897 00000 n 
+trailer<< /Size 7 /Root 1 0 R /Info 6 0 R >>
+startxref
+1013
+%%EOF

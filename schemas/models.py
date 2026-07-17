@@ -58,6 +58,33 @@ class Claim(BaseModel):
         json_encoders = {bytes: lambda b: b.hex() if b else None}
 
 
+class LLMReview(BaseModel):
+    """Advisory output from the Ollama-backed LLM reviewer."""
+
+    recommendation: ClaimStatus = Field(
+        ..., description="LLM-suggested status (does not override exact duplicates)"
+    )
+    summary: str = Field(..., description="Plain-language explanation for reviewers")
+    confidence: float = Field(
+        ..., ge=0.0, le=1.0, description="Model self-reported confidence"
+    )
+    model: str = Field(
+        default="gemma4:latest", description="Ollama model used for this review"
+    )
+
+
+class ProcessingTiming(BaseModel):
+    """Wall-clock timings for one claim through the pipeline (milliseconds)."""
+
+    extract_ms: float = Field(default=0.0, ge=0)
+    forensic_ms: float = Field(default=0.0, ge=0)
+    audit_ms: float = Field(default=0.0, ge=0)
+    scoring_ms: float = Field(default=0.0, ge=0)
+    llm_ms: float = Field(default=0.0, ge=0)
+    persist_ms: float = Field(default=0.0, ge=0)
+    total_ms: float = Field(default=0.0, ge=0)
+
+
 class ReviewResult(BaseModel):
     """Result produced by the fraud pipeline for a single claim."""
 
@@ -76,6 +103,19 @@ class ReviewResult(BaseModel):
     )
     ai_prediction: Optional[int] = Field(
         default=None, description="Binary prediction: 1=fraud, 0=legitimate"
+    )
+    llm_review: Optional[LLMReview] = Field(
+        default=None,
+        description="Advisory LLM narrative for PENDING_REVIEW / FLAGGED claims",
+    )
+    processing_time_ms: Optional[float] = Field(
+        default=None,
+        ge=0,
+        description="End-to-end wall-clock time for this claim (milliseconds)",
+    )
+    timing: Optional[ProcessingTiming] = Field(
+        default=None,
+        description="Per-stage timing breakdown",
     )
 
 

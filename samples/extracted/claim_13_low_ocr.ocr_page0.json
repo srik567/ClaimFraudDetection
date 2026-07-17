@@ -1,0 +1,11 @@
+{
+  "invoice_id": "CLAIM-PHS-12345679-LOWOCR",
+  "amount": 11000.0,
+  "patient_name": "POR",
+  "hospital_id": "LMN1234",
+  "timestamp": "2024-08-22T00:00:00",
+  "ocr_confidence": 0.9189,
+  "source_file": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_13_low_ocr.ocr_page0.png",
+  "raw_text": "PARAMOUNT HEALTH SERVICES & INSURANCE TPA PRIVATE LIMITED\nCLAIM ACKNOWLEDGMENT SHEET\nScenario: LOW_OCR\n\nName of Insurer: ABC Insurance Company PHS ID: LMN1234\nPatient Name: POR\n\nPolicy No: CLAIM-PHS-12345679-LOWOCR\n\nHospital ID: LMN1234\n\nName of Hospital where Admitted: City Hospital\n\nDate: 2024-08-22\n\nDETAILS OF CLAIM:\nHospital main Bill 11000\nAmount: Rs. 11000\n\nRs. 11000 yt: 11000",
+  "image_path": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_13_low_ocr.ocr_page0.png"
+}

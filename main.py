@@ -28,11 +28,14 @@ After simulation:
 
 from __future__ import annotations
 
+import argparse
+import json
 import logging
 import os
 import sys
+import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # ---------------------------------------------------------------------------
 # Ensure the project root is on sys.path so submodules can import each other.
@@ -42,12 +45,18 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from agents.auditor_agent import AuditorAgent
+from agents.document_extractor import DocumentExtractionError, DocumentExtractor
 from agents.extraction_agent import ExtractionAgent
 from agents.forensic_agent import ForensicAgent
+from agents.llm_reviewer import LLMReviewer
+from evaluation.efficiency import compute_efficiency, format_efficiency_console
+from evaluation.findings import build_claim_manager_findings
+from evaluation.html_report import write_analysis_html
 from evaluation.metrics import MetricsEvaluator
 from feedback.feedback_loop import FeedbackLoop
 from mock_data.generator import ClaimGenerator
-from schemas.models import Claim, ClaimStatus, FraudType, ReviewResult
+from schemas.models import Claim, ClaimStatus, FraudType, ProcessingTiming, ReviewResult
+from sklearn.metrics import confusion_matrix
 
 # ---------------------------------------------------------------------------
 # Logging configuration
@@ -85,12 +94,13 @@ class FraudPipeline:
     Extraction → Forensic → Auditor → Risk Score → ReviewResult
     """
 
-    def __init__(self) -> None:
+    def __init__(self, use_llm: Optional[bool] = None) -> None:
         self.extractor = ExtractionAgent()
         self.forensic = ForensicAgent()
         self.auditor = AuditorAgent()
         self.evaluator = MetricsEvaluator()
         self.feedback = FeedbackLoop()
+        self.llm_reviewer = LLMReviewer(enabled=use_llm)
 
     def process(
         self,
@@ -108,23 +118,35 @@ class FraudPipeline:
         Returns:
             (normalised_claim, review_result)
         """
+        t0 = time.perf_counter()
+        timing = ProcessingTiming()
+
         # ── Step 1: Extraction & normalisation ───────────────────────────
+        t = time.perf_counter()
         claim = self.extractor.mock_ocr_extract(raw_data)
+        timing.extract_ms = (time.perf_counter() - t) * 1000.0
 
         # ── Step 2: Forensic analysis ─────────────────────────────────────
-        image_source: Optional[bytes] = None
+        t = time.perf_counter()
+        image_source: Optional[bytes | str] = None
         if inject_ela:
             image_source = ForensicAgent.mock_tampered_image_bytes(ela_score_target=18.0)
+        elif claim.image_path:
+            image_source = claim.image_path
 
         ela_score, forensic_flags = self.forensic.analyze_claim(
             pdf_bytes=claim.raw_pdf_bytes,
             image_source=image_source,
         )
+        timing.forensic_ms = (time.perf_counter() - t) * 1000.0
 
         # ── Step 3: Auditor matching ──────────────────────────────────────
+        t = time.perf_counter()
         match_result = self.auditor.audit(claim)
+        timing.audit_ms = (time.perf_counter() - t) * 1000.0
 
         # ── Step 4: Risk score composition ───────────────────────────────
+        t = time.perf_counter()
         risk_score, feature_scores = self._compute_risk_score(
             match_result=match_result,
             forensic_flags=forensic_flags,
@@ -139,6 +161,7 @@ class FraudPipeline:
         status = self._decide(risk_score)
         fraud_type = self._infer_fraud_type(all_flags, status)
         reason = self._build_reason(all_flags, ela_score, risk_score, status)
+        timing.scoring_ms = (time.perf_counter() - t) * 1000.0
 
         result = ReviewResult(
             claim_id=claim.invoice_id,
@@ -151,8 +174,28 @@ class FraudPipeline:
             ai_prediction=1 if status != ClaimStatus.APPROVED else 0,
         )
 
-        # ── Step 6: Persist prediction ────────────────────────────────────
+        # ── Step 6: Advisory narrative (PENDING / FLAGGED only) ───────────
+        t = time.perf_counter()
+        llm_review = self.llm_reviewer.review(claim, result)
+        timing.llm_ms = (time.perf_counter() - t) * 1000.0
+        if llm_review is not None:
+            result = result.model_copy(update={"llm_review": llm_review})
+
+        # Plain-language findings for claim managers (rules + advisory text).
+        manager_findings = build_claim_manager_findings(
+            claim, result, ela_score=ela_score
+        )
+        result = result.model_copy(update={"reason": manager_findings})
+
+        # ── Step 7: Persist prediction ────────────────────────────────────
+        t = time.perf_counter()
         self.feedback.store_ai_prediction(result)
+        timing.persist_ms = (time.perf_counter() - t) * 1000.0
+
+        timing.total_ms = (time.perf_counter() - t0) * 1000.0
+        result = result.model_copy(
+            update={"processing_time_ms": timing.total_ms, "timing": timing}
+        )
 
         return claim, result
 
@@ -232,30 +275,12 @@ class FraudPipeline:
         risk_score: float,
         status: ClaimStatus,
     ) -> str:
+        """Placeholder reason; replaced by claim-manager findings after LLM step."""
         if status == ClaimStatus.APPROVED:
-            return "No fraud signals detected — claim approved."
-
-        parts: List[str] = []
-        if any("EXACT_DUPLICATE" in f for f in flags):
-            parts.append("SHA-256 hash matches a previously seen claim")
-        if any("FUZZY_DUPLICATE" in f for f in flags):
-            parts.append("Invoice ID closely resembles an existing record (possible character substitution)")
-        if any("CROSS_REFERENCE" in f for f in flags):
-            parts.append("Same patient / date / amount already exists under a different invoice number")
-        if any("METADATA" in f for f in flags):
-            parts.append("PDF metadata reveals unauthorized editing software (Photoshop/Canva)")
-        if any("ELA" in f for f in flags):
-            parts.append(
-                f"Error Level Analysis detected pixel-level tampering (ELA score: {ela_score:.2f})"
-            )
-
-        if status == ClaimStatus.PENDING_REVIEW and not parts:
-            parts.append("Multiple borderline signals below individual thresholds")
-
-        reason = "; ".join(parts)
+            return "No concerns found — ready for normal processing."
         if status == ClaimStatus.PENDING_REVIEW:
-            reason = f"PENDING HUMAN REVIEW — {reason} (risk score: {risk_score:.0f})"
-        return reason
+            return "Needs claim manager review before payment."
+        return "Hold for investigation before payment."
 
 
 # ===========================================================================
@@ -275,12 +300,17 @@ def print_claim_result(index: int, claim: Claim, result: ReviewResult) -> None:
     print(f"  Patient   : {claim.patient_name}")
     print(f"  Amount    : ${claim.amount:,.2f}   Hospital: {claim.hospital_id}")
     print(f"  Risk Score: {result.risk_score:.0f}/100")
+    if result.processing_time_ms is not None:
+        print(f"  Time      : {result.processing_time_ms:.0f} ms")
+        if result.timing is not None:
+            tm = result.timing
+            print(
+                f"              extract={tm.extract_ms:.0f}  forensic={tm.forensic_ms:.0f}  "
+                f"audit={tm.audit_ms:.0f}  score={tm.scoring_ms:.0f}  "
+                f"llm={tm.llm_ms:.0f}  persist={tm.persist_ms:.0f}"
+            )
     print(f"  STATUS    : [{status_icon}] {result.status.value}")
-    if result.flags:
-        print("  Flags     :")
-        for flag in result.flags:
-            print(f"              • {flag}")
-    print(f"  Reason    : {result.reason}")
+    print(f"  Findings  : {result.reason}")
 
 
 def print_error_analysis_report(
@@ -343,10 +373,129 @@ def print_error_analysis_report(
 
 
 # ===========================================================================
-# Main entry point
+# Document ingestion mode
 # ===========================================================================
 
-def main() -> None:
+def _json_safe_payload(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """Drop non-JSON fields (bytes) before writing extracted claim JSON."""
+    return {
+        key: value
+        for key, value in raw.items()
+        if key != "raw_pdf_bytes" and not isinstance(value, (bytes, bytearray))
+    }
+
+
+def run_document_pipeline(
+    input_dir: Path,
+    json_out: Path,
+    *,
+    use_llm: Optional[bool] = None,
+    html_out: Optional[Path] = None,
+) -> None:
+    """
+    Read claim documents from disk → write extracted JSON → run FraudPipeline.
+    """
+    print("\n" + "=" * 64)
+    print("  CLAIM FRAUD DETECTION — DOCUMENT OCR INGESTION")
+    print("=" * 64)
+    print(f"  Input dir : {input_dir.resolve()}")
+    print(f"  JSON out  : {json_out.resolve()}")
+
+    extractor = DocumentExtractor()
+    pipeline = FraudPipeline(use_llm=use_llm)
+    json_out.mkdir(parents=True, exist_ok=True)
+
+    batch_t0 = time.perf_counter()
+    extracted, failures = extractor.extract_directory(input_dir)
+    if failures:
+        print(f"\n  Skipped {len(failures)} document(s):")
+        for path, err in failures:
+            short = err.split("OCR text preview:")[0].strip()
+            print(f"    • {path.name}: {short}")
+
+    if not extracted:
+        print("\n  No documents successfully extracted (pdf/png/jpg/tiff).")
+        return
+
+    print(f"\n  Extracted {len(extracted)} document(s)\n")
+    results: List[ReviewResult] = []
+    claim_pairs: List[Tuple[Claim, ReviewResult]] = []
+
+    for index, (path, raw) in enumerate(extracted, start=1):
+        out_path = json_out / f"{path.stem}.json"
+        safe = _json_safe_payload(raw)
+        safe.pop("_extract_ms", None)
+        out_path.write_text(
+            json.dumps(safe, indent=2, default=str),
+            encoding="utf-8",
+        )
+        print(f"  JSON      : {out_path.name}")
+
+        ocr_hint_ms = float(raw.pop("_extract_ms", 0.0) or 0.0)
+
+        claim, result = pipeline.process(raw, inject_ela=False)
+        if ocr_hint_ms > 0 and result.timing is not None:
+            tm = result.timing.model_copy(
+                update={
+                    "extract_ms": result.timing.extract_ms + ocr_hint_ms,
+                    "total_ms": result.timing.total_ms + ocr_hint_ms,
+                }
+            )
+            result = result.model_copy(
+                update={
+                    "timing": tm,
+                    "processing_time_ms": tm.total_ms,
+                }
+            )
+
+        print_claim_result(index, claim, result)
+        results.append(result)
+        claim_pairs.append((claim, result))
+
+    batch_wall = time.perf_counter() - batch_t0
+
+    pending = [r for r in results if r.status == ClaimStatus.PENDING_REVIEW]
+    flagged = [r for r in results if r.status == ClaimStatus.FLAGGED]
+    approved = [r for r in results if r.status == ClaimStatus.APPROVED]
+    print("\n" + "=" * 64)
+    print("  DOCUMENT RUN SUMMARY")
+    print("=" * 64)
+    print(f"  Processed : {len(results)}")
+    print(f"  APPROVED  : {len(approved)}")
+    print(f"  PENDING   : {len(pending)}")
+    print(f"  FLAGGED   : {len(flagged)}")
+    print(f"  JSON dir  : {json_out.resolve()}")
+
+    efficiency = compute_efficiency(claim_pairs, batch_wall_seconds=batch_wall)
+    print(format_efficiency_console(efficiency))
+
+    report_path = html_out or (ROOT / "samples" / "analysis_report.html")
+    write_analysis_html(
+        report_path,
+        title="Claim Fraud Detection — Document Analysis",
+        claims=claim_pairs,
+        summary={
+            "processed": len(results),
+            "approved": len(approved),
+            "pending": len(pending),
+            "flagged": len(flagged),
+        },
+        failures=[
+            (p.name, err.split("OCR text preview:")[0].strip())
+            for p, err in failures
+        ],
+        efficiency=efficiency,
+        source_note=f"Input: {input_dir.resolve()}",
+    )
+    print(f"  HTML report: {report_path.resolve()}")
+    print()
+
+
+def run_simulation(
+    *,
+    use_llm: Optional[bool] = None,
+    html_out: Optional[Path] = None,
+) -> None:
     print("\n" + "=" * 64)
     print("  CLAIM FRAUD DETECTION — 10-CLAIM SIMULATION")
     print("=" * 64)
@@ -356,7 +505,7 @@ def main() -> None:
     if db_path.exists():
         os.remove(db_path)
 
-    pipeline = FraudPipeline()
+    pipeline = FraudPipeline(use_llm=use_llm)
     generator = ClaimGenerator(seed=2024)
 
     # ── Generate the 11 scenario dicts ───────────────────────────────────────
@@ -458,6 +607,28 @@ def main() -> None:
     # ── Final report ──────────────────────────────────────────────────────────
     print_error_analysis_report(results, ground_truth, pipeline.evaluator, y_true_ordered)
 
+    y_pred = pipeline.evaluator.results_to_binary_labels(results)
+    metrics = pipeline.evaluator.compute_metrics(y_true_ordered, y_pred)
+
+    cm = confusion_matrix(y_true_ordered, y_pred, labels=[0, 1])
+    tn, fp, fn, tp = (int(cm[0][0]), int(cm[0][1]), int(cm[1][0]), int(cm[1][1]))
+
+    report_path = html_out or (ROOT / "samples" / "analysis_report.html")
+    claim_pairs = list(zip(claims_processed, results))
+    efficiency = compute_efficiency(claim_pairs)
+    print(format_efficiency_console(efficiency))
+
+    write_analysis_html(
+        report_path,
+        title="Claim Fraud Detection — Simulation Analysis",
+        claims=claim_pairs,
+        metrics=metrics,
+        confusion=(tn, fp, fn, tp),
+        efficiency=efficiency,
+        source_note="10-claim mock simulation",
+    )
+    print(f"\n  HTML report: {report_path.resolve()}")
+
     # ── Feedback DB summary ───────────────────────────────────────────────────
     print("\n  [SQLITE FEEDBACK STORE]")
     all_preds = pipeline.feedback.get_all_predictions()
@@ -469,7 +640,54 @@ def main() -> None:
     print()
 
     print("  Run `python main.py` again to see improved metrics after retraining.")
-    print("  Run `python -m mock_data.generator --count 200` for 200 synthetic claims.\n")
+    print("  Run `python -m mock_data.generator --count 200` for 200 synthetic claims.")
+    print("  Run `python main.py --input-dir samples/claims` for real OCR ingestion.\n")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Claim fraud detection — mock simulation or filesystem OCR ingestion",
+    )
+    parser.add_argument(
+        "--input-dir",
+        type=Path,
+        default=None,
+        help="Directory of claim PDFs/images to OCR and process",
+    )
+    parser.add_argument(
+        "--json-out",
+        type=Path,
+        default=ROOT / "samples" / "extracted",
+        help="Directory to write extracted claim JSON (document mode)",
+    )
+    parser.add_argument(
+        "--html-out",
+        type=Path,
+        default=ROOT / "samples" / "analysis_report.html",
+        help="Path for the HTML analysis report",
+    )
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help="Disable Ollama LLM advisory reviews",
+    )
+    args = parser.parse_args()
+    use_llm = False if args.no_llm else None
+
+    if args.input_dir is not None:
+        try:
+            run_document_pipeline(
+                args.input_dir,
+                args.json_out,
+                use_llm=use_llm,
+                html_out=args.html_out,
+            )
+        except DocumentExtractionError as exc:
+            logger.error("Document ingestion failed: %s", exc)
+            sys.exit(1)
+        return
+
+    run_simulation(use_llm=use_llm, html_out=args.html_out)
 
 
 if __name__ == "__main__":

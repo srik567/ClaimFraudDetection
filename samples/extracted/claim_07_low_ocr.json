@@ -1,0 +1,11 @@
+{
+  "invoice_id": "CLAIM-H005-LOW-202403-300",
+  "amount": 640.0,
+  "patient_name": "Emily Chen",
+  "hospital_id": "HOSP-005",
+  "timestamp": "2024-03-15T00:00:00",
+  "ocr_confidence": 0.9135,
+  "source_file": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_07_low_ocr.png",
+  "raw_text": "INSURANCE CLAIM FORM\n\nInvoice ID: CLAIM-H005-LOW-202403-300\nPatient Name: Emily Chen\n\nHospital ID: HOSP-005\n\nAmount: $640.00\n\nDate: 2024-03-15",
+  "image_path": "/Users/srikanth.av/OldLaptopBackup/ClaimFraudDetection/samples/claims/claim_07_low_ocr.png"
+}
